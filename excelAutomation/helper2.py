@@ -44,6 +44,8 @@ def write_json(new_data, filename='data.json'):
         # convert back to json.
         json.dump(file_data, file, indent = 4)
  
+ 
 def write_txt(new_data, filename="clients.txt"):
     with open(filename, 'a') as file:
         file.write(new_data + "\n")
+

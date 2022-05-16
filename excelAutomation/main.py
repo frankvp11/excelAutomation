@@ -1,133 +1,185 @@
-from openpyxl import Workbook, load_workbook
-from os import listdir
-from os.path import isfile, join
-import time
-import json
-from helper2 import couldnt_find_client, get_curr_price, get_curr_job
-import os
-from datetime import datetime
+from gc import get_referents
+from turtle import Screen
+import pygame, sys
+from button import Button
+from inputBox import InputBox
+from helper2 import write_json, write_txt, create_new
+from text_based import read_txt, read_excel
+
+pygame.init()
+
+SCREEN = pygame.display.set_mode((1280, 720))
+pygame.display.set_caption("Menu")
+
+BG = pygame.image.load("assets/Background.png")
+
+def get_font(size): # Returns Press-Start-2P in the desired size
+    return pygame.font.Font("assets/font.ttf", size)
+
+def new_client():
+    client_name = InputBox(500, 200, 300, 50)
+    client_address = InputBox(500, 340, 300, 50)
+    while True:
+        PLAY_MOUSE_POS = pygame.mouse.get_pos()
+
+        SCREEN.fill("black")
+
+        PLAY_TEXT = get_font(20).render("This is the new client screen.", True, "White")
+        client_name_text = get_font(20).render("Enter the client's name here", True, "white")
+        client_address_text = get_font(20).render("Enter the client's address here", True, 'white')
+        name_text_rect = client_name_text.get_rect(center=(640, 160))
+        address_text_rect = client_address_text.get_rect(center=(640, 300))
+        PLAY_RECT = PLAY_TEXT.get_rect(center=(640, 50))
+        SCREEN.blit(PLAY_TEXT, PLAY_RECT)
+        SCREEN.blit(client_name_text, name_text_rect)
+        SCREEN.blit(client_address_text, address_text_rect)
+
+        PLAY_BACK = Button(image=None, pos=(640, 650), 
+                            text_input="BACK", font=get_font(50), base_color="White", hovering_color="Green")
+
+        PLAY_BACK.changeColor(PLAY_MOUSE_POS)
+        PLAY_BACK.update(SCREEN)
+        done_button = Button(image=None, pos=(640, 500), text_input="Save", font=get_font(30), base_color='white', hovering_color='green')
+        done_button.changeColor(PLAY_MOUSE_POS)
+        done_button.update(SCREEN)
+        
+ 
 
 
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if PLAY_BACK.checkForInput(PLAY_MOUSE_POS):
+                    main_menu()
+                if done_button.checkForInput(PLAY_MOUSE_POS):
+                    current_client = client_name.text
+                    current_address = client_address.text
+                    y = {current_client:{"Address":current_address}}
+                    write_json(y)
+                    write_txt(current_client)
+                    create_new(current_client)
+                    client_name.text = ""
+                    client_address.text = ""
+            client_name.handle_event(event, SCREEN)
+            client_address.handle_event(event, SCREEN)
+        
+        client_address.update()
+        client_address.draw(SCREEN)
+        client_name.update()
+        client_name.draw(SCREEN)
 
-path = "C:/Users/frank/Desktop/excelAutomation/clientFiles"
-all_files = [file for file in listdir(path) if isfile(join(path, file))]
 
-def get_curr_client():
-    current_client = input("Enter the client's full name whos file you want to change: \n")
-    return current_client
-
-def could_find_client(current_client):
-    print("Was able to find client")
-    current_price = get_curr_price()
-    current_job = get_curr_job()
-    current_address = read_data2(current_client)["Address"]
-    date_job_done = get_date()
-    os.system("cls")
-    return current_price, current_job, current_address, date_job_done
-
-
-def get_date():
-    date = input("What day did you do this on? \n")
-    return date
-
-def insert_data(current_price, current_job, current_address, current_client, date_done):
-    path = f"C:/Users/frank/Desktop/excelAutomation/clientFiles/{current_client}.xlsx"
-    workbook = load_workbook(path)
-    worksheet = workbook.active
-    worksheet.cell(10, 2, current_client) 
-    worksheet.cell(11, 2, current_address)
-    date = datetime.today().strftime('%Y-%m-%d')
-    worksheet.cell(10, 10, date)
-    if worksheet.cell(21, 3).value == None:
-        worksheet.cell(21, 3, current_job)
-        worksheet.cell(21, 10, current_price)
-        worksheet.cell(21, 7, date_done)
-    else:
-        if worksheet.cell(22, 3).value == None:
-            worksheet.cell(22, 3, current_job)
-            worksheet.cell(22, 10, current_price)
-            worksheet.cell(22, 7, date_done)
-
-        else:
-            if worksheet.cell(23, 3).value == None:
-                worksheet.cell(23, 3, current_job)
-                worksheet.cell(23, 10, current_price)
-                worksheet.cell(23, 7, date_done)
-
-            else:
-                if worksheet.cell(24, 3).value == None:                
-                    worksheet.cell(24, 3, current_job)
-                    worksheet.cell(24, 10, current_price)
-                    worksheet.cell(24, 7, date_done)
-                    print("full")
-                    want_to_print = input("Would you like to print? Y/N\n").lower()
-                    if want_to_print == "y":
-                        print(f"Your book is full, currently working to print {current_client}'s file")
-                        print("Please hold")
-                        os.startfile(path, 'print')
-                        time.sleep(20)
-                    clear_cell_input = input("Would you like to empty the previous person's file? Y/N \n").lower()
-                    if clear_cell_input == "y":
-                        clear_file(workbook, path)
-                        return
-    print("Done inserting data")
-    workbook.save(path)  
-                        
-def clear_file(workbook, path):
-    worksheet = workbook.active
-    worksheet.cell(21, 3).value=None
-    worksheet.cell(21, 10).value=None
-    worksheet.cell(22, 3).value=None
-    worksheet.cell(22, 10).value=None
-    worksheet.cell(23, 3).value=None
-    worksheet.cell(23, 10).value=None
-    worksheet.cell(24, 3).value=None
-    worksheet.cell(24, 10).value=None
-    worksheet.cell(21, 7).value=None
-    worksheet.cell(22, 7).value=None
-    worksheet.cell(23, 7).value=None
-    worksheet.cell(24, 7).value=None
-
+        pygame.display.update()
     
-    workbook.save(path)
-
-                
 
 
-def read_data2(current_client):
-    with open("data.json", "r") as file:
-        data = json.load(file)
-        stack = data["Clients"]
-        while stack:
-            if current_client in stack[0]:
-                return stack[0][current_client]
-            stack.pop(0)
-            
+def existing_client():
+    client_name = InputBox(500, 200, 300, 50)
+    is_in_text = False
 
-def read_txt(current_client):
-    with open("clients.txt", "r") as file:
-        data = file.read()
-        if current_client in data:
-            return True
-    return False
+    while True:
+        OPTIONS_MOUSE_POS = pygame.mouse.get_pos()
+        SCREEN.fill("black")
 
+        client_name_text = get_font(20).render("Enter the client's name here", True, "white")
+        name_text_rect = client_name_text.get_rect(center=(640, 160))
+        SCREEN.blit(client_name_text, name_text_rect)
+        OPTIONS_TEXT = get_font(15).render("This is the existing clients screen.", True, "white")
+        OPTIONS_RECT = OPTIONS_TEXT.get_rect(center=(640, 50))
+        SCREEN.blit(OPTIONS_TEXT, OPTIONS_RECT)
 
+        OPTIONS_BACK = Button(image=None, pos=(640, 620), 
+                            text_input="BACK", font=get_font(20), base_color="white", hovering_color="Green")
+        OPTIONS_BACK.changeColor(OPTIONS_MOUSE_POS)
+        OPTIONS_BACK.update(SCREEN)
 
-
-def interrogate():
-    current_client = get_curr_client()
-    boolean_client_in_text = read_txt(current_client)
-    if f"{current_client}.xlsx" in all_files or boolean_client_in_text:
-        current_price, current_job, current_address, date_done = could_find_client(current_client)
-        print(current_price)
-        print(current_job)
-        print(current_address)
-        print(date_done)
-        insert_data(current_price, current_job, current_address, current_client, date_done)
-    else:
-        couldnt_find_client(current_client)
-    interrogate()
-
-interrogate()
+        save_button = Button(image=None, pos=(640, 350), text_input="Save", font=get_font(20), base_color="white", hovering_color="green")
+        save_button.changeColor(OPTIONS_MOUSE_POS)
+        save_button.update(SCREEN)
 
 
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if OPTIONS_BACK.checkForInput(OPTIONS_MOUSE_POS):
+                    main_menu()
+                if save_button.checkForInput(OPTIONS_MOUSE_POS):
+                    current_client = client_name.text
+                    is_in_text = read_txt(current_client)
+                    if is_in_text:
+                        change_data_screen(current_client)                   
+                    
+            client_name.handle_event(event, SCREEN)
+
+        client_name.update()
+        client_name.draw(SCREEN)
+
+        pygame.display.update()
+
+def change_data_screen(current_client):
+    jobs_done, prices_for_jobs, dates = read_excel(current_client)
+    while True:
+        SCREEN.fill("black")
+        client_name_text = get_font(15).render(current_client, True, 'white')
+        client_name_rect = client_name_text.get_rect(center=(150,50))
+        SCREEN.blit(client_name_text, client_name_rect)
+        for i in range(len(jobs_done)):
+            jobs_currently_done = get_font(15).render(jobs_done[i], True, 'white')
+            jobs_done_rect = jobs_currently_done.get_rect(center=(150, i+1*100))
+            SCREEN.blit(jobs_currently_done, jobs_done_rect)
+
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+
+
+        pygame.display.update()
+    
+
+
+
+def main_menu():
+    while True:
+        SCREEN.blit(BG, (0, 0))
+
+        MENU_MOUSE_POS = pygame.mouse.get_pos()
+
+        MENU_TEXT = get_font(100).render("MAIN MENU", True, "#b68f40")
+        MENU_RECT = MENU_TEXT.get_rect(center=(640, 100))
+
+        PLAY_BUTTON = Button(image=pygame.image.load("assets/Play Rect.png"), pos=(640, 250), 
+                            text_input="New Client", font=get_font(20), base_color="#d7fcd4", hovering_color="White")
+        OPTIONS_BUTTON = Button(image=pygame.image.load("assets/Options Rect.png"), pos=(640, 400), 
+                            text_input="Existing Clients", font=get_font(20), base_color="#d7fcd4", hovering_color="White")
+        QUIT_BUTTON = Button(image=pygame.image.load("assets/Quit Rect.png"), pos=(640, 550), 
+                            text_input="QUIT", font=get_font(75), base_color="#d7fcd4", hovering_color="White")
+
+        SCREEN.blit(MENU_TEXT, MENU_RECT)
+
+        for button in [PLAY_BUTTON, OPTIONS_BUTTON, QUIT_BUTTON]:
+            button.changeColor(MENU_MOUSE_POS)
+            button.update(SCREEN)
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if PLAY_BUTTON.checkForInput(MENU_MOUSE_POS):
+                    new_client()
+                if OPTIONS_BUTTON.checkForInput(MENU_MOUSE_POS):
+                    existing_client()
+                if QUIT_BUTTON.checkForInput(MENU_MOUSE_POS):
+                    pygame.quit()
+                    sys.exit()
+
+        pygame.display.update()
+
+main_menu()
