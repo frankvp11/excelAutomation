@@ -1,4 +1,6 @@
-
+import calendar
+from re import I
+from time import strptime
 from turtle import Screen
 import pygame, sys
 from button import Button
@@ -6,7 +8,7 @@ from inputBox import InputBox
 from helper2 import write_json, write_txt, create_new
 from text_based import insert_data, read_txt, read_excel, read_data2, insert_data2, print_file
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from dateutil import parser
 
 
@@ -173,19 +175,43 @@ def change_data_screen(current_client):
             dates[i] = parser.parse(dates[i])
             dates_dict.append(InputBox(300, 150+i*50, 250, 50, text=dates[i].strftime("%d %b %Y ")))
             jobs_done_dict.append(InputBox(50, 150+i*50, 250, 50, text=jobs_done[i]))
-            prices_for_jobs_dict.append(InputBox(550, 150+i*50, 125, 50, text=f"{prices_for_jobs[i]}"))
-        except:
+            prices_for_jobs_dict.append(InputBox(550, 150+i*50, 125, 50, text=prices_for_jobs[i]))
+        except TypeError:
             dates_dict.append(InputBox(300, 150+i*50, 250, 50))
             jobs_done_dict.append(InputBox(50, 150+i*50, 250, 50))
             prices_for_jobs_dict.append(InputBox(550, 150+i*50, 125, 50))
-    
+
+
     jobs_buttons = []
     jobs = read_data2(current_client)['Jobs']
     for i in range(len(jobs)):
-        jobs_buttons.append(Button(image=None, pos=(800+i*150, 100), text_input=jobs[i], font=get_font(15), base_color='white', hovering_color='green'))
+        jobs_buttons.append(Button(image=None, pos=(950, 100+i*30), text_input=jobs[i], font=get_font(15), base_color='white', hovering_color='green'))
+
+    cal = calendar.Calendar()
+    cal.setfirstweekday(6)
+    month = date.today().month
+    year = date.today().year
+    this_month_data = cal.monthdayscalendar(year, month)
+    list_of_date_buttons = []
+    for i in range(len(this_month_data)):
+        list_of_date_button_j = []
+        for j in range(len(this_month_data[i])):
+            list_of_date_button_j.append(Button(image=None, pos=(50+j*75, 500+i*30), text_input=str(this_month_data[i][j]), font=get_font(25), base_color='white', hovering_color='green'))
+        list_of_date_buttons.append(list_of_date_button_j)
 
 
+    weeks_button_dict = []
+    jobs_button_dict = []
+    for i in range(5):
+        weeks_button_dict.append(Button(image=None, pos=(1150, 175+i*50), text_input=f"{i + 1}", base_color='white', hovering_color='Green', font=get_font(25)))
+        jobs_button_dict.append(Button(image=None, pos=(900, 175+i*50), text_input=f"{i + 1}", base_color='white', hovering_color='Green', font=get_font(25)))
+    
+    
+    
     while True:
+ 
+
+
         OPTIONS_MOUSE_POS = pygame.mouse.get_pos()
         SCREEN.fill("black")
         jobs_done_text = get_font(15).render("Job done", True, 'white')
@@ -210,7 +236,7 @@ def change_data_screen(current_client):
         print_button.changeColor(OPTIONS_MOUSE_POS)
         print_button.update(SCREEN)
         
-        OPTIONS_BACK = Button(image=None, pos=(640, 620), 
+        OPTIONS_BACK = Button(image=None, pos=(750, 620), 
                             text_input="BACK", font=get_font(20), base_color="white", hovering_color="Green")
         OPTIONS_BACK.changeColor(OPTIONS_MOUSE_POS)
         OPTIONS_BACK.update(SCREEN)
@@ -219,17 +245,21 @@ def change_data_screen(current_client):
                     
         change_all_4_wk.changeColor(OPTIONS_MOUSE_POS)
         change_all_4_wk.update(SCREEN)
-        weeks_button_dict = []
-        jobs_button_dict = []
-        for i in range(5):
-            weeks_button_dict.append(Button(image=None, pos=(1150, 175+i*50), text_input=f"{i + 1}", base_color='white', hovering_color='Green', font=get_font(25)))
-            jobs_button_dict.append(Button(image=None, pos=(900, 175+i*50), text_input=f"{i + 1}", base_color='white', hovering_color='Green', font=get_font(25)))
+
+
+
+        for x in range(len(list_of_date_buttons)):
+            for y in range(len(list_of_date_buttons[i])):
+                list_of_date_buttons[x][y].changeColor(OPTIONS_MOUSE_POS)
+                list_of_date_buttons[x][y].update(SCREEN)
+
+
         for i in range(len(weeks_button_dict)):
             weeks_button_dict[i].changeColor(OPTIONS_MOUSE_POS)
             weeks_button_dict[i].update(SCREEN)
             jobs_button_dict[i].changeColor(OPTIONS_MOUSE_POS)
             jobs_button_dict[i].update(SCREEN)
-        for i in range(len(dates_dict)):
+        for i in range(len(prices_for_jobs_dict)):
             dates_dict[i].update()
             dates_dict[i].draw(SCREEN)
             jobs_done_dict[i].update()
@@ -238,9 +268,11 @@ def change_data_screen(current_client):
             prices_for_jobs_dict[i].draw(SCREEN)
 
         for i in range(len(jobs_buttons)):
-            jobs_buttons[i].changeColor(OPTIONS_MOUSE_POS)
-            
+            jobs_buttons[i].changeColor(OPTIONS_MOUSE_POS)  
             jobs_buttons[i].update(SCREEN)
+
+        
+
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -268,34 +300,57 @@ def change_data_screen(current_client):
                             if prices_for_jobs_dict[i].text[0] == "$":
                                 prices_for_jobs_dict[i].text = prices_for_jobs_dict[i].text[1:]
                         except:
-                            break
+                            pass
 
                     insert_data2(prices_for_jobs_dict, jobs_done_dict, read_data2(current_client)["Address"], current_client, dates_dict)
                     change_data_screen(current_client)
-                for i in range(len(weeks_button_dict)):
-                        if weeks_button_dict[i].checkForInput(OPTIONS_MOUSE_POS):  
+                for i in range(len(weeks_button_dict)):  
+                    if weeks_button_dict[i].checkForInput(OPTIONS_MOUSE_POS):  
+                        weeks_button_dict[i].base_color = "Blue"
+                        for k in range(len(weeks_button_dict)):
+                            if k != i and weeks_button_dict[k].base_color == "Blue":
+                                weeks_button_dict[k].base_color = 'White'
+                        
+                if change_all_4_wk.checkForInput(OPTIONS_MOUSE_POS):
+                    for i in range(len(weeks_button_dict)):
+                        if weeks_button_dict[i].base_color == 'Blue':
                             dates[i] += timedelta(weeks=4)
                             dates_dict[i] = InputBox(300, 150+i*50, 250, 50, text=dates[i].strftime("%d %b %Y"))
+
+
                 for i in range(len(jobs_button_dict)):
                     if jobs_button_dict[i].checkForInput(OPTIONS_MOUSE_POS):
                         try:
                             if jobs_buttons[0].base_color == 'Blue':
-                                jobs_done_dict[i] = InputBox(50, 150+i*50, 250, 50, text=jobs_done[0])
+                                ###
+                                # changed jobs[0] from jobs_done
+                                jobs_done_dict[i] = InputBox(50, 150+i*50, 250, 50, text=jobs[0])
                                 prices_for_jobs_dict[i] = InputBox(550, 150+i*50, 125, 50, text=read_data2(current_client)["Price"][0])
-   
+
                             if jobs_buttons[1].base_color == 'Blue':
                                 jobs_done_dict[i] = InputBox(50, 150+i*50, 250, 50, text=jobs[1])
                                 prices_for_jobs_dict[i] = InputBox(550, 150+i*50, 125, 50, text=read_data2(current_client)["Price"][1])
+
 
                         except IndexError:
                             if jobs_buttons[0].base_color == 'Blue':
                                 jobs_done_dict[i] = InputBox(50, 150+i*50, 250, 50, text=jobs[0])
                                 prices_for_jobs_dict[i] = InputBox(550, 150+i*50, 125, 50, text=read_data2(current_client)["Price"][0])
-                        
 
-                        
 
-            for i in range(len(dates_dict)):
+                for w in range(len(list_of_date_buttons)):
+                    for u in range(len(list_of_date_buttons[w])):
+                        if list_of_date_buttons[w][u].checkForInput(OPTIONS_MOUSE_POS):
+                            for i in range(len(weeks_button_dict)):
+                                if weeks_button_dict[i].base_color == "Blue":
+                                    new_u = list_of_date_buttons[w][u].text_input
+                                    date20 = parser.parse(f"{year}/{month}/{new_u}")   
+                                    dates[i] = date20
+                                    #
+                                    dates_dict[i] = InputBox(300, 150+i*50, 250, 50, text=date20.strftime("%d %b %Y"))
+
+            
+            for i in range(5):
                 dates_dict[i].handle_event(event, SCREEN)
                 jobs_done_dict[i].handle_event(event, SCREEN)
                 prices_for_jobs_dict[i].handle_event(event, SCREEN)

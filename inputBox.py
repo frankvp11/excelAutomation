@@ -38,9 +38,15 @@ class InputBox:
                     self.score = 0
                     self.active = False
                 elif event.key == pygame.K_BACKSPACE:
-                    self.text = self.text[:-1]
+                    try:
+                        self.text = self.text[:-1]
+                    except TypeError:
+                        pass
                 else:
-                    self.text += event.unicode
+                    try:
+                        self.text += event.unicode
+                    except TypeError:
+                        pass
                     # Cursor
 
                     self.txt_rect.size = self.txt_surface.get_size()

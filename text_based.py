@@ -19,13 +19,10 @@ def read_excel(current_client):
     list_of_dates = []
     workbook = load_workbook(f"C:/Users/frank/Desktop/excelAutomation/clientFiles/{current_client}.xlsx", read_only=True)
     worksheet = workbook.active
-    for i in range(21, 30):
-        if worksheet.cell(row=i, column=3).value == None:
-            pass
-        else:
-            list_of_things_done.append(worksheet.cell(row=i, column=3).value)
-            list_of_prices.append(worksheet.cell(row=i, column=10).value)
-            list_of_dates.append(worksheet.cell(row=i, column=7).value)
+    for i in range(21, 27):
+        list_of_things_done.append(worksheet.cell(row=i, column=3).value)
+        list_of_prices.append(worksheet.cell(row=i, column=10).value)
+        list_of_dates.append(worksheet.cell(row=i, column=7).value)
     return list_of_things_done, list_of_prices, list_of_dates
 
 
@@ -128,7 +125,6 @@ def clear_file(workbook, path):
 
     
     workbook.save(path)
-    print("Cleared file")
     return
 
                 
