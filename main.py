@@ -1,15 +1,226 @@
 import calendar
 from re import I
-from time import strptime
-from turtle import Screen
+
 import pygame, sys
-from button import Button
-from inputBox import InputBox
-from helper2 import write_json, write_txt, create_new
-from text_based import insert_data, read_txt, read_excel, read_data2, insert_data2, print_file
 import pandas as pd
 from datetime import datetime, timedelta, date
 from dateutil import parser
+import os
+from openpyxl import load_workbook
+import json
+import shutil
+
+
+import pygame
+import time
+
+pygame.font.init()
+
+text_font = pygame.font.Font("assets/font.ttf", 16)
+leftover = 0
+
+class Button():
+	def __init__(self, image, pos, text_input, font, base_color, hovering_color):
+		self.image = image
+		self.x_pos = pos[0]
+		self.y_pos = pos[1]
+		self.font = font
+		self.base_color, self.hovering_color = base_color, hovering_color
+		self.text_input = text_input
+		self.text = self.font.render(self.text_input, True, self.base_color)
+		if self.image is None:
+			self.image = self.text
+		self.rect = self.image.get_rect(center=(self.x_pos, self.y_pos))
+		self.text_rect = self.text.get_rect(center=(self.x_pos, self.y_pos))
+
+	def update(self, screen):
+		if self.image is not None:
+			screen.blit(self.image, self.rect)
+		screen.blit(self.text, self.text_rect)
+
+	def checkForInput(self, position):
+		if position[0] in range(self.rect.left, self.rect.right) and position[1] in range(self.rect.top, self.rect.bottom):
+			return True
+		return False
+
+	def changeColor(self, position):
+		if position[0] in range(self.rect.left, self.rect.right) and position[1] in range(self.rect.top, self.rect.bottom):
+			self.text = self.font.render(self.text_input, True, self.hovering_color)
+		else:
+			self.text = self.font.render(self.text_input, True, self.base_color)
+
+class InputBox:
+
+    def __init__(self, x, y, w, h, text=''):
+        self.rect = pygame.Rect(x, y, w, h)
+        self.color = (255,255,255)
+        self.text = text
+        self.txt_surface = text_font.render(text, True, self.color)
+        self.active = False
+        self.score = 1
+        # Cursor declare
+        self.txt_rect = self.txt_surface.get_rect()
+        self.cursor = pygame.Rect(self.txt_rect.topright, (3, self.txt_rect.height + 2))
+
+    def handle_event(self, event, screen):
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            # If the user clicked on the input_box rect.
+            if self.rect.collidepoint(event.pos):
+                
+                # Toggle the active variable.
+                self.active = not self.active
+            else:
+                self.active = False
+
+        if event.type == pygame.KEYDOWN:
+            if self.active:
+                if event.key == pygame.K_RETURN:
+                    print(self.text)
+                    global leftover
+                    leftover += self.score
+                    self.score = 0
+                    self.active = False
+                elif event.key == pygame.K_BACKSPACE:
+                    try:
+                        self.text = self.text[:-1]
+                    except TypeError:
+                        pass
+                else:
+                    try:
+                        self.text += event.unicode
+                    except TypeError:
+                        pass
+                    # Cursor
+
+                    self.txt_rect.size = self.txt_surface.get_size()
+                    self.cursor.topleft = self.txt_rect.topright
+
+                    # Limit characters           -20 for border width
+                    if self.txt_surface.get_width() > self.rect.w - 15:
+                        self.text = self.text[:-1]
+
+    def draw(self, screen):
+        # Blit the text.
+        screen.blit(self.txt_surface, (self.rect.x + 5, self.rect.y + 10))
+        # Blit the rect.
+        pygame.draw.rect(screen, self.color, self.rect, 1)
+        # Blit the  cursor
+        if time.time() % 1 > 0.5:
+            text_rect = self.txt_surface.get_rect(topleft = (self.rect.x + 5, self.rect.y + 10))
+
+            # set cursor position
+            self.cursor.midleft = text_rect.midright
+            if self.active:
+                pygame.draw.rect(screen, self.color, self.cursor)
+
+
+
+    def update(self):
+        # Re-render the text.
+        self.txt_surface = text_font.render(self.text, True, self.color)
+
+
+def create_new(current_client):
+    original = "C:/Users/frank/Desktop/excelAutomation/assets/template.xlsx"
+    new = f"C:/Users/frank/Desktop/excelAutomation/clientFiles/{current_client}.xlsx"
+    shutil.copyfile(original, new)
+
+
+def write_json(new_data, filename='data.json'):
+    with open(filename,'r+') as file:
+          # First we load existing data into a dict.
+        file_data = json.load(file)
+        # Join new_data with file_data inside emp_details
+        file_data["Clients"].append(new_data)
+        # Sets file's current position at offset.
+        file.seek(0)
+        # convert back to json.
+        json.dump(file_data, file, indent = 4)
+ 
+ 
+def write_txt(new_data, filename="clients.txt"):
+    with open(filename, 'a') as file:
+        file.write(new_data + "\n")
+
+
+def read_data2(current_client):
+    with open("data.json", "r") as file:
+        data = json.load(file)
+        stack = data["Clients"]
+        while stack:
+            if current_client in stack[0]:
+                return stack[0][current_client]
+            stack.pop(0)
+            
+def read_txt(current_client):
+    with open("clients.txt", "r") as file:
+        data = file.read()
+        if current_client in data:
+            return True
+    return False
+
+def read_excel(current_client):
+    list_of_things_done = []
+    list_of_prices = []
+    list_of_dates = []
+    workbook = load_workbook(f"C:/Users/frank/Desktop/excelAutomation/clientFiles/{current_client}.xlsx", read_only=True)
+    worksheet = workbook.active
+    for i in range(21, 27):
+        list_of_things_done.append(worksheet.cell(row=i, column=3).value)
+        list_of_prices.append(worksheet.cell(row=i, column=10).value)
+        list_of_dates.append(worksheet.cell(row=i, column=7).value)
+    return list_of_things_done, list_of_prices, list_of_dates
+
+def insert_data2(current_price, current_job, current_address, current_client, date_done):
+    path = f"C:/Users/frank/Desktop/excelAutomation/clientFiles/{current_client}.xlsx"
+    workbook = load_workbook(path)
+    clear_file(workbook, path)
+    worksheet = workbook.active
+    worksheet.cell(10, 2, current_client) 
+    worksheet.cell(11, 2, current_address)
+    date = datetime.today().strftime('%Y-%m-%d')
+    worksheet.cell(10, 10, date)
+    i = 21
+    while current_price:
+        price = current_price.pop(0).text
+        try:
+            price = int(price)
+        except:
+            price = price
+
+        job = current_job.pop(0)
+        date2 = date_done.pop(0)
+        if worksheet.cell(i, 3).value != worksheet.cell(100, 3).value:
+            pass
+        else:
+            worksheet.cell(i, 3, job.text)
+            worksheet.cell(i, 7, date2.text)
+            worksheet.cell(i, 10, price)
+        i += 1 
+        workbook.save(path)
+
+def print_file(path):
+    os.startfile(path, 'print')
+    workbook = load_workbook(path)
+    worksheet = workbook.active
+    current_value = worksheet.cell(9, 10).value
+    list_of_val = list(current_value)
+    list_of_val[0] = str(int(list_of_val[0]) + 1)
+    new_value = "".join(list_of_val)
+    worksheet.cell(9, 10, value=new_value)
+    workbook.save(path)
+
+def clear_file(workbook, path):
+    worksheet = workbook.active
+    for i in range(20, 28):
+        worksheet.cell(i, 3).value=None
+        worksheet.cell(i, 7).value=None
+        worksheet.cell(i, 10).value=None
+
+
+    
+    workbook.save(path)
+    return
 
 
 pygame.init()
@@ -174,12 +385,19 @@ def change_data_screen(current_client):
         try:
             dates[i] = parser.parse(dates[i])
             dates_dict.append(InputBox(300, 150+i*50, 250, 50, text=dates[i].strftime("%d %b %Y ")))
-            jobs_done_dict.append(InputBox(50, 150+i*50, 250, 50, text=jobs_done[i]))
-            prices_for_jobs_dict.append(InputBox(550, 150+i*50, 125, 50, text=prices_for_jobs[i]))
         except TypeError:
             dates_dict.append(InputBox(300, 150+i*50, 250, 50))
+
+        try:
+            jobs_done_dict.append(InputBox(50, 150+i*50, 250, 50, text=jobs_done[i]))
+        except TypeError:
             jobs_done_dict.append(InputBox(50, 150+i*50, 250, 50))
+
+        try:
+            prices_for_jobs_dict.append(InputBox(550, 150+i*50, 125, 50, text=str(prices_for_jobs[i])))
+        except TypeError:
             prices_for_jobs_dict.append(InputBox(550, 150+i*50, 125, 50))
+
 
 
     jobs_buttons = []
@@ -191,12 +409,17 @@ def change_data_screen(current_client):
     cal.setfirstweekday(6)
     month = date.today().month
     year = date.today().year
-    this_month_data = cal.monthdayscalendar(year, month)
-    list_of_date_buttons = []
+    this_month_data = cal.monthdatescalendar(year, month)
+    this_month_data2 = cal.monthdatescalendar(year, month)
     for i in range(len(this_month_data)):
-        list_of_date_button_j = []
         for j in range(len(this_month_data[i])):
-            list_of_date_button_j.append(Button(image=None, pos=(50+j*75, 500+i*30), text_input=str(this_month_data[i][j]), font=get_font(25), base_color='white', hovering_color='green'))
+            this_month_data[i][j] = this_month_data[i][j].strftime("%m/%d")
+            this_month_data2[i][j] = this_month_data2[i][j].strftime("%d")
+    list_of_date_buttons = []
+    for i in range(len(this_month_data2)):
+        list_of_date_button_j = []
+        for j in range(len(this_month_data2[i])):
+            list_of_date_button_j.append(Button(image=None, pos=(50+j*100, 500+i*30), text_input=str(this_month_data2[i][j]), font=get_font(25), base_color='white', hovering_color='green'))
         list_of_date_buttons.append(list_of_date_button_j)
 
 
@@ -259,7 +482,8 @@ def change_data_screen(current_client):
             weeks_button_dict[i].update(SCREEN)
             jobs_button_dict[i].changeColor(OPTIONS_MOUSE_POS)
             jobs_button_dict[i].update(SCREEN)
-        for i in range(len(prices_for_jobs_dict)):
+        for i in range(len(dates_dict)):
+
             dates_dict[i].update()
             dates_dict[i].draw(SCREEN)
             jobs_done_dict[i].update()
@@ -280,6 +504,7 @@ def change_data_screen(current_client):
                 sys.exit()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if print_button.checkForInput(OPTIONS_MOUSE_POS):
+                    insert_data2(prices_for_jobs_dict, jobs_done_dict, read_data2(current_client)["Address"], current_client, dates_dict)
                     print_file(path)
                 if OPTIONS_BACK.checkForInput(OPTIONS_MOUSE_POS):
                     existing_client()
@@ -343,14 +568,15 @@ def change_data_screen(current_client):
                         if list_of_date_buttons[w][u].checkForInput(OPTIONS_MOUSE_POS):
                             for i in range(len(weeks_button_dict)):
                                 if weeks_button_dict[i].base_color == "Blue":
-                                    new_u = list_of_date_buttons[w][u].text_input
-                                    date20 = parser.parse(f"{year}/{month}/{new_u}")   
+                                    new_u = this_month_data[w][u]
+                                    date20 = parser.parse(f"{year}/{new_u}")   
                                     dates[i] = date20
                                     #
                                     dates_dict[i] = InputBox(300, 150+i*50, 250, 50, text=date20.strftime("%d %b %Y"))
 
             
             for i in range(5):
+
                 dates_dict[i].handle_event(event, SCREEN)
                 jobs_done_dict[i].handle_event(event, SCREEN)
                 prices_for_jobs_dict[i].handle_event(event, SCREEN)
